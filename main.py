@@ -44,17 +44,32 @@ async def menu_handler(call: CallbackQuery):
             victim = await (await db.execute("SELECT id, name, resources, immunity FROM users WHERE id != ? ORDER BY RANDOM() LIMIT 1", (call.from_user.id,))).fetchone()
         if victim:
             # Механика: успех зависит от нашей летальности и иммунитета жертвы
-            chance = 0.5 + (u[9] * 0.05) - (victim[3] * 0.05)
-            if random.random() < chance:
-                loot = victim[2] * 0.1
-                async with aiosqlite.connect("bio_game.db") as db:
-                    await db.execute("UPDATE users SET resources = resources + ? WHERE id=?", (loot, call.from_user.id))
-                    await db.execute("UPDATE users SET resources = resources - ? WHERE id=?", (loot, victim[0]))
-                    await db.commit()
-                await call.answer(f"✅ Успех! Украдено {loot:.1f} ресурсов.", show_alert=True)
-            else:
-                await call.answer("🛡 Атака отбита! Высокий иммунитет жертвы.", show_alert=True)
-            return
+            @dp.callback_query()
+async def menu_handler(call: CallbackQuery):
+    await call.answer()  # Убираем часики
+    
+    # Определяем текст для каждой кнопки
+    if call.data == "lab":
+        text = "🧪 Лаборатория: здесь ты можешь улучшать вирус."
+    elif call.data == "pathogen":
+        text = "🧬 Патоген: характеристики твоего вируса."
+    elif call.data == "attack":
+        text = "⚔️ Атака: поиск цели..."
+    elif call.data == "res":
+        text = "💰 Ресурсы: твой склад накоплений."
+    elif call.data == "root_admin":
+        text = "⚙️ ROOT-ПАНЕЛЬ: администрирование."
+    else:
+        text = "Меню"
+
+    # Безопасное обновление текста
+    try:
+        await call.message.edit_text(text, reply_markup=get_main_kb(call.from_user.id))
+    except Exception as e:
+        if "message is not modified" not in str(e):
+            print(f"Ошибка: {e}")
+            
+    return
 
     status = "👑 ВЛАДЕЛЕЦ" if call.from_user.id == OWNER_ID else "🧬 Мутант"
     text = (f"Статус: {status}\n🏷 Патоген: {u[4]} (x{u[5]})\n🧪 Квал: {u[6]} ур.\n\n"
