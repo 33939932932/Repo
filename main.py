@@ -10,8 +10,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Получаем конфиг из переменных окружения
-TOKEN = os.environ.get("BOT_TOKEN", "")
-OWNER_ID = int(os.environ.get("OWNER_ID", "0"))  # ID владельца из переменной окружения
+TOKEN = os.environ.get("BOT_TOKEN", "7890123456:ABCdefGHIjklmnoPQRstuvwxyz")
+OWNER_ID = int(os.environ.get("OWNER_ID", "123456789"))  # ID владельца из переменной окружения
 PORT = int(os.environ.get("PORT", 10000))
 
 bot = Bot(token=TOKEN)
