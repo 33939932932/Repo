@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Получаем конфиг из переменных окружения
 TOKEN = os.environ.get("BOT_TOKEN", "7890123456:ABCdefGHIjklmnoPQRstuvwxyz")
-OWNER_ID = int(os.environ.get("OWNER_ID", "123456789"))  # ID владельца из переменной окружения
+OWNER_ID = int(os.environ.get("OWNER_ID", "33939932932"))  # ID владельца из переменной окружения
 PORT = int(os.environ.get("PORT", 10000))
 
 bot = Bot(token=TOKEN)
@@ -66,6 +66,52 @@ def get_main_kb(user_id):
         kb.append([InlineKeyboardButton(text="⚙️ ROOT-ПАНЕЛЬ", callback_data="root_admin")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
+def get_lab_kb():
+    """Получить клавиатуру лаборатории"""
+    kb = [[InlineKeyboardButton(text="⬆️ Улучшить", callback_data="lab_upgrade"),
+           InlineKeyboardButton(text="📊 Статус", callback_data="lab_status")],
+          [InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")]]
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+def get_back_kb():
+    """Получить клавиатуру возврата в главное меню"""
+    kb = [[InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")]]
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+@dp.callback_query(F.data == "back_main")
+async def back_main(call: CallbackQuery):
+    """Возврат в главное меню"""
+    await call.answer()
+    try:
+        async with aiosqlite.connect("bio_game.db") as db:
+            u = await (await db.execute("SELECT * FROM users WHERE id=?", (call.from_user.id,))).fetchone()
+        
+        if not u:
+            await call.answer("❌ Пользователь не найден", show_alert=True)
+            return
+        
+        status = "👑 ВЛАДЕЛЕЦ" if is_owner(call.from_user.id) else "🧬 Мутант"
+        ops_percentage = (u[12] / u[11] * 100) if u[11] > 0 else 0
+        
+        text = (
+            f"Статус: {status}\n"
+            f"🏷 Патоген: {u[4]} (x{u[5]})\n"
+            f"🧪 Квал: {u[6]} ур.\n\n"
+            f"⚡️ НАВЫКИ:\n"
+            f"🦠 Заразность: {u[7]} | 🛡 Иммунитет: {u[8]}\n"
+            f"💀 Летальность: {u[9]} | 👮 СБ: {u[10]}\n\n"
+            f"📊 СТАТИСТИКА:\n"
+            f"☣️ Опыт: {u[2]} | 🧬 Рес: {u[3]:.1f}k\n"
+            f"😷 Спецопер: {u[12]}/{u[11]} ({ops_percentage:.1f}%)\n"
+            f"🕶 Предотвращено: {u[13]}\n\n"
+            f"💡 Выберите действие"
+        )
+        
+        await call.message.edit_text(text, reply_markup=get_main_kb(call.from_user.id))
+    except Exception as e:
+        logger.error(f"Back main error: {e}")
+        await call.answer("❌ Произошла ошибка", show_alert=True)
+
 @dp.callback_query(F.data.in_(["lab", "pathogen", "res", "attack", "root_admin"]))
 async def menu_handler(call: CallbackQuery):
     """Обработчик главного меню"""
@@ -88,39 +134,117 @@ async def menu_handler(call: CallbackQuery):
             await call.answer("🚫 Вы заблокированы", show_alert=True)
             return
         
-        # Определяем текст для каждой кнопки
-        menu_texts = {
-            "lab": "🧪 Лаборатория: здесь ты можешь улучшать вирус.",
-            "pathogen": "🧬 Патоген: характеристики твоего вируса.",
-            "attack": "⚔️ Атака: поиск цели...",
-            "res": "💰 Ресурсы: твой склад накоплений.",
-            "root_admin": "⚙️ ROOT-ПАНЕЛЬ: администрирование."
-        }
+        if call.data == "lab":
+            text = f"🧪 ЛАБОРАТОРИЯ\n\nТекущий уровень: {u[6]} ур.\nОпыт для улучшения: {u[2]}\nРесурсы: {u[3]:.1f}k\n\nСтоимость улучшения: 50 опыта и 10k ресурсов"
+            await call.message.edit_text(text, reply_markup=get_lab_kb())
         
-        status = "👑 ВЛАДЕЛЕЦ" if is_owner(call.from_user.id) else "🧬 Мутант"
-        ops_percentage = (u[12] / u[11] * 100) if u[11] > 0 else 0
+        elif call.data == "pathogen":
+            text = (
+                f"🧬 ПАТОГЕН: {u[4]}\n\n"
+                f"Количество: {u[5]}\n"
+                f"Уровень лаборатории: {u[6]}\n\n"
+                f"ХАРАКТЕРИСТИКИ:\n"
+                f"🦠 Заразность: {u[7]}\n"
+                f"🛡 Иммунитет: {u[8]}\n"
+                f"💀 Летальность: {u[9]}\n"
+                f"👮 Безопасность: {u[10]}"
+            )
+            await call.message.edit_text(text, reply_markup=get_back_kb())
         
-        text = (
-            f"Статус: {status}\n"
-            f"🏷 Патоген: {u[4]} (x{u[5]})\n"
-            f"🧪 Квал: {u[6]} ур.\n\n"
-            f"⚡️ НАВЫКИ:\n"
-            f"🦠 Заразность: {u[7]} | 🛡 Иммунитет: {u[8]}\n"
-            f"💀 Летальность: {u[9]} | 👮 СБ: {u[10]}\n\n"
-            f"📊 СТАТИСТИКА:\n"
-            f"☣️ Опыт: {u[2]} | 🧬 Рес: {u[3]:.1f}k\n"
-            f"😷 Спецопер: {u[12]}/{u[11]} ({ops_percentage:.1f}%)\n"
-            f"🕶 Предотвращено: {u[13]}\n\n"
-            f"💡 {menu_texts.get(call.data, 'Меню')}"
-        )
+        elif call.data == "res":
+            text = (
+                f"💰 РЕСУРСЫ\n\n"
+                f"Вашего склада:\n"
+                f"🧬 Ресурсы: {u[3]:.1f}k\n"
+                f"☣️ Опыт: {u[2]}\n\n"
+                f"Дополнительно:\n"
+                f"😷 Спецоперации: {u[12]}/{u[11]}\n"
+                f"🕶 Предотвращено заболеваний: {u[13]}"
+            )
+            await call.message.edit_text(text, reply_markup=get_back_kb())
         
-        await call.message.edit_text(text, reply_markup=get_main_kb(call.from_user.id))
+        elif call.data == "attack":
+            enemy_pathogens = random.randint(1, 10)
+            attack_result = random.choice(["Успех! 🎯", "Попадание! ✅", "Критический удар! 💥"])
+            text = (
+                f"⚔️ АТАКА\n\n"
+                f"Найдена цель...\n"
+                f"Патогенов врага: {enemy_pathogens}\n"
+                f"Результат: {attack_result}\n\n"
+                f"Спецоперация выполнена!"
+            )
+            await call.message.edit_text(text, reply_markup=get_back_kb())
+        
+        elif call.data == "root_admin":
+            text = (
+                f"⚙️ ROOT-ПАНЕЛЬ\n\n"
+                f"Команды администратора:\n"
+                f"/ban <user_id> - заблокировать пользователя\n"
+                f"/sudo <column> <user_id> <value> - изменить параметр\n\n"
+                f"Доступные колонки:\n"
+                f"bio_exp, resources, pathogens_count, lab_level,\n"
+                f"contagiousness, immunity, lethality, security_service,\n"
+                f"ops_total, ops_won, prevented"
+            )
+            await call.message.edit_text(text, reply_markup=get_back_kb())
     
     except Exception as e:
         error_msg = str(e)
         if "message is not modified" not in error_msg:
             logger.error(f"Menu handler error: {e}")
             await call.answer("❌ Произошла ошибка", show_alert=True)
+
+@dp.callback_query(F.data == "lab_upgrade")
+async def lab_upgrade(call: CallbackQuery):
+    """Улучшение лаборатории"""
+    await call.answer()
+    try:
+        async with aiosqlite.connect("bio_game.db") as db:
+            u = await (await db.execute("SELECT * FROM users WHERE id=?", (call.from_user.id,))).fetchone()
+            
+            if u[2] >= 50 and u[3] >= 10:
+                await db.execute(
+                    "UPDATE users SET lab_level = lab_level + 1, bio_exp = bio_exp - 50, resources = resources - 10 WHERE id=?",
+                    (call.from_user.id,)
+                )
+                await db.commit()
+                text = "✅ Лаборатория улучшена на 1 уровень!"
+            else:
+                text = f"❌ Недостаточно ресурсов!\nНужно: 50 опыта и 10k ресурсов\nЕсть: {u[2]} опыта и {u[3]:.1f}k ресурсов"
+        
+        await call.answer(text, show_alert=True)
+        
+        # Обновляем информацию
+        async with aiosqlite.connect("bio_game.db") as db:
+            u = await (await db.execute("SELECT * FROM users WHERE id=?", (call.from_user.id,))).fetchone()
+        
+        text = f"🧪 ЛАБОРАТОРИЯ\n\nТекущий уровень: {u[6]} ур.\nОпыт для улучшения: {u[2]}\nРесурсы: {u[3]:.1f}k\n\nСтоимость улучшения: 50 опыта и 10k ресурсов"
+        await call.message.edit_text(text, reply_markup=get_lab_kb())
+    except Exception as e:
+        logger.error(f"Lab upgrade error: {e}")
+        await call.answer("❌ Произошла ошибка", show_alert=True)
+
+@dp.callback_query(F.data == "lab_status")
+async def lab_status(call: CallbackQuery):
+    """Статус лаборатории"""
+    await call.answer()
+    try:
+        async with aiosqlite.connect("bio_game.db") as db:
+            u = await (await db.execute("SELECT * FROM users WHERE id=?", (call.from_user.id,))).fetchone()
+        
+        bonus = u[6] * 5  # Бонус опыта за уровень
+        text = (
+            f"📊 СТАТУС ЛАБОРАТОРИИ\n\n"
+            f"Уровень: {u[6]}\n"
+            f"Бонус опыта: +{bonus}%\n"
+            f"Текущий опыт: {u[2]}\n"
+            f"Ресурсы: {u[3]:.1f}k\n\n"
+            f"Каждое улучшение дает +5% к опыту!"
+        )
+        await call.message.edit_text(text, reply_markup=get_lab_kb())
+    except Exception as e:
+        logger.error(f"Lab status error: {e}")
+        await call.answer("❌ Произошла ошибка", show_alert=True)
 
 @dp.message(F.text.lower().contains("заразить"))
 async def infect_cmd(msg: Message):
