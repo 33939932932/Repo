@@ -14,7 +14,8 @@ app = Flask(__name__)
 @app.route('/')
 def home(): return "OK"
 def run_flask(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
- async def init_db():
+
+async def init_db():
     async with aiosqlite.connect("bio_game.db") as db:
         await db.execute("""CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY, name TEXT, bio_exp INTEGER DEFAULT 0, resources REAL DEFAULT 0,
@@ -23,6 +24,7 @@ def run_flask(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000))
             lethality INTEGER DEFAULT 1, security_service INTEGER DEFAULT 1, 
             ops_total INTEGER DEFAULT 0, ops_won INTEGER DEFAULT 0, prevented INTEGER DEFAULT 0, is_banned INTEGER DEFAULT 0)""")
         await db.commit()
+
 def get_main_kb(user_id):
     kb = [[InlineKeyboardButton(text="🧪 Лаба", callback_data="lab"), InlineKeyboardButton(text="🧬 Патоген", callback_data="pathogen")],
           [InlineKeyboardButton(text="💰 Ресурсы", callback_data="res"), InlineKeyboardButton(text="⚔️ Атака", callback_data="attack")]]
@@ -57,8 +59,9 @@ async def menu_handler(call: CallbackQuery):
     status = "👑 ВЛАДЕЛЕЦ" if call.from_user.id == OWNER_ID else "🧬 Мутант"
     text = (f"Статус: {status}\n🏷 Патоген: {u[4]} (x{u[5]})\n🧪 Квал: {u[6]} ур.\n\n"
             f"⚡️ НАВЫКИ:\n🦠 Заразность: {u[7]} | 🛡 Иммунитет: {u[8]}\n💀 Летальность: {u[9]} | 👮 СБ: {u[10]}\n\n"
-            f"📊 СТАТИСТИКА:\n☣️ Опыт: {u[2]} | 🧬 Рес: {u[3]:.1f}k\n😷 Спецопер: {u[12]}/{u[11]} ({ (u[12]/u[11]*100 if u[11]>0 else 0):.1f}%)\n🕶 Предотвращено: {u[13]}")
+            f"📊 СТАТИСТИКА:\n☣️ Опыт: {u[2]} | 🧬 Рес: {u[3]:.1f}k\n😷 Спецопер: {u[12]}/{u[11]} ({ (u[12]/u[11]*100 if u[11]>0 else 0):.1f}%)\n🕶 Предотв: {u[13]}")
     await call.message.edit_text(text, reply_markup=get_main_kb(call.from_user.id))
+
 @dp.message(F.text.lower().contains("заразить"))
 async def infect_cmd(msg: Message):
     async with aiosqlite.connect("bio_game.db") as db:
@@ -94,4 +97,4 @@ async def sudo(msg: Message):
 if __name__ == "__main__":
     Thread(target=run_flask, daemon=True).start()
     asyncio.run(init_db())
-    asyncio.run(dp.start_polling(bot))    
+    asyncio.run(dp.start_polling(bot))
