@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Получаем конфиг из переменных окружения
-TOKEN = os.environ.get("BOT_TOKEN", "7890123456:ABCdefGHIjklmnoPQRstuvwxyz")
+TOKEN = os.environ.get("BOT_TOKEN", "8874295002:AAG1LjCninGU731q-zhuIAKae2bC22PqRZY")
 OWNER_ID = int(os.environ.get("OWNER_ID", "33939932932"))  # ID владельца из переменной окружения
 PORT = int(os.environ.get("PORT", 10000))
 
@@ -135,7 +135,7 @@ async def menu_handler(call: CallbackQuery):
             return
         
         if call.data == "lab":
-            text = f"🧪 ЛАБОРАТОРИЯ\n\nТекущий уровень: {u[6]} ур.\nОпыт для улучшения: {u[2]}\nРесурсы: {u[3]:.1f}k\n\nСтоимость улучшения: 50 опыта и 10k ресурсов"
+            text = f"🧪 ЛАБОРАТОРИЯ\n\nТекущий уровень: {u[6]} ур.\nОпыт для улучшения: {u[2]}\nРесурсы: {u[3]:.1f}k\n\nСтоимость улучшения: 50 опыта + 10k ресурсов"
             await call.message.edit_text(text, reply_markup=get_lab_kb())
         
         elif call.data == "pathogen":
@@ -218,7 +218,7 @@ async def lab_upgrade(call: CallbackQuery):
         async with aiosqlite.connect("bio_game.db") as db:
             u = await (await db.execute("SELECT * FROM users WHERE id=?", (call.from_user.id,))).fetchone()
         
-        text = f"🧪 ЛАБОРАТОРИЯ\n\nТекущий уровень: {u[6]} ур.\nОпыт для улучшения: {u[2]}\nРесурсы: {u[3]:.1f}k\n\nСтоимость улучшения: 50 опыта и 10k ресурсов"
+        text = f"🧪 ЛАБОРАТОРИЯ\n\nТекущий уровень: {u[6]} ур.\nОпыт для улучшения: {u[2]}\nРесурсы: {u[3]:.1f}k\n\nСтоимость улучшения: 50 опыта + 10k ресурсов"
         await call.message.edit_text(text, reply_markup=get_lab_kb())
     except Exception as e:
         logger.error(f"Lab upgrade error: {e}")
