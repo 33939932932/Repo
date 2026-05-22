@@ -59,8 +59,17 @@ async def menu_handler(call: CallbackQuery):
     status = "👑 ВЛАДЕЛЕЦ" if call.from_user.id == OWNER_ID else "🧬 Мутант"
     text = (f"Статус: {status}\n🏷 Патоген: {u[4]} (x{u[5]})\n🧪 Квал: {u[6]} ур.\n\n"
             f"⚡️ НАВЫКИ:\n🦠 Заразность: {u[7]} | 🛡 Иммунитет: {u[8]}\n💀 Летальность: {u[9]} | 👮 СБ: {u[10]}\n\n"
-            f"📊 СТАТИСТИКА:\n☣️ Опыт: {u[2]} | 🧬 Рес: {u[3]:.1f}k\n😷 Спецопер: {u[12]}/{u[11]} ({ (u[12]/u[11]*100 if u[11]>0 else 0):.1f}%)\n🕶 Предотв: {u[13]}")
-    await call.message.edit_text(text, reply_markup=get_main_kb(call.from_user.id))
+            f"📊 СТАТИСТИКА:\n☣️ Опыт: {u[2]} | 🧬 Рес: {u[3]:.1f}k\n😷 Спецопер: {u[12]}/{u[11]} ({ (u[12]/u[11]*100 if u[11]>0 else 0):.1f}%)\n🕶 Предо[...]
+    
+    try:
+        await call.message.edit_text(text, reply_markup=get_main_kb(call.from_user.id))
+    except Exception as e:
+        if "message is not modified" in str(e):
+            pass # Игнорируем ошибку, если ничего не изменилось
+        else:
+            print(f"Ошибка: {e}")
+            
+    return # Выход, чтобы бот не крутил код дальше
 
 @dp.message(F.text.lower().contains("заразить"))
 async def infect_cmd(msg: Message):
